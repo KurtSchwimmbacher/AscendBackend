@@ -3,9 +3,15 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+.python-version
 *.egg-info/
-.env
-.venv/
+.eggs/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage*
+coverage.xml
+.tox/
 .cache/
 
 # OS
@@ -19,3 +25,34 @@ Thumbs.db
 # Data/Weights
 app/models/
 
+# Environments
+venv/
+.venv/
+env/
+
+# Build artifacts
+build/
+dist/
+
+# Logs and temp
+logs/
+*.log
+tmp/
+temp/
+
+# ML artifacts
+runs/
+outputs/
+datasets/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.weights
+*.bin
+
+# Local env files
+.env
+.env.*
