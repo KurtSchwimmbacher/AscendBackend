@@ -1,0 +1,18 @@
+[project]
+name = "climb-backend"
+version = "0.1.0"
+description = "Backend API for YOLOv8 climbing detection"
+authors = [
+    {name = "Your Name", email = "you@example.com"}
+]
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+    "pydantic-settings",
+    "python-multipart",
+    "torch",
+    "ultralytics",
+    "huggingface_hub"
+]
