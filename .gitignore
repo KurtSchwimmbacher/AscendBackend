@@ -34,6 +34,9 @@ env/
 build/
 dist/
 
+# Generated static files
+static/images/
+
 # Logs and temp
 logs/
 *.log

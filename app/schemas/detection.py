@@ -34,6 +34,9 @@ class DetectRequestQuery(BaseModel):
     # Optional confidence threshold for filtering detections
     # Must be between 0.0 and 1.0 if provided
     conf: Optional[float] = Field(None, ge=0.0, le=1.0)
+    
+    # Whether to return annotated image with bounding boxes
+    return_annotated_image: bool = Field(False, description="Return URL to image with drawn bounding boxes")
 
 
 # ------------------------------
@@ -42,3 +45,6 @@ class DetectRequestQuery(BaseModel):
 class DetectResponse(BaseModel):
     # List of all detected holds in the uploaded image
     detections: List[Detection]
+    
+    # Optional URL to image with bounding boxes drawn
+    image_with_boxes: Optional[str] = Field(None, description="URL to image with drawn bounding boxes")

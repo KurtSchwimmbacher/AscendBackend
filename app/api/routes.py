@@ -84,10 +84,17 @@ async def detect(
             raise HTTPException(status_code=400, detail="Empty file uploaded")
         
         # 4. Run YOLO inference using your service layer
-        detections = predict_holds(contents, conf=query.conf)
+        detections, annotated_image_url = predict_holds(
+            contents, 
+            conf=query.conf,
+            return_annotated_image=query.return_annotated_image
+        )
 
         # 5. Return results wrapped in a Pydantic response model
-        return DetectResponse(detections=detections)
+        return DetectResponse(
+            detections=detections,
+            image_with_boxes=annotated_image_url
+        )
         
     except HTTPException:
         # If you already raised an HTTPException above, just re-raise it

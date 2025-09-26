@@ -1,4 +1,6 @@
+import os
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from app.core.logging import configure_logging
 from app.api.routes import api_router
 
@@ -20,6 +22,12 @@ def create_app() -> FastAPI:
 
     # Register all API routes from your `api_router`
     application.include_router(api_router)
+    
+    # Mount static files for serving annotated images
+    # Create static directory if it doesn't exist
+    os.makedirs("static", exist_ok=True)
+    os.makedirs("static/images", exist_ok=True)
+    application.mount("/static", StaticFiles(directory="static"), name="static")
 
     # Return the configured application
     return application
