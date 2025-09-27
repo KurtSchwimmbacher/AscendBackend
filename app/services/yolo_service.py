@@ -1,19 +1,21 @@
 import logging
 import io
-import base64
-import os
-import uuid
-import time
 from functools import lru_cache
 from typing import Any, List, Optional, Tuple
 
 from huggingface_hub import hf_hub_download
 from ultralytics import YOLO
-from PIL import Image, ImageDraw, ImageFont
-import cv2
-import numpy as np
+from PIL import Image
 
 from app.core.config import settings
+from app.services.color_service import (
+    draw_bounding_boxes,
+    save_annotated_image,
+    cleanup_old_images,
+    get_color_at_pixel,
+    classify_color,
+    filter_detections_by_color
+)
 
 
 # Set up a logger for this module
@@ -48,153 +50,6 @@ def get_model() -> YOLO:
     return model
 
 
-# ------------------------------
-# Helper Functions for Image Visualization
-# ------------------------------
-def draw_bounding_boxes(
-    image: Image.Image, 
-    detections: List[dict],
-    conf_threshold: float = 0.5
-) -> Image.Image:
-    """
-    Draw bounding boxes and confidence scores on the image.
-    
-    Args:
-        image: PIL Image object
-        detections: List of detection dictionaries
-        conf_threshold: Minimum confidence to display
-        
-    Returns:
-        PIL Image with drawn bounding boxes
-    """
-    # Create a copy to avoid modifying the original
-    img_with_boxes = image.copy()
-    draw = ImageDraw.Draw(img_with_boxes)
-    
-    # Try to load a font, fall back to default if not available
-    try:
-        font = ImageFont.truetype("arial.ttf", 16)
-    except (OSError, IOError):
-        font = ImageFont.load_default()
-    
-    for detection in detections:
-        if detection["score"] < conf_threshold:
-            continue
-            
-        bbox = detection["bbox_xyxy"]
-        score = detection["score"]
-        
-        # Convert to integers for drawing
-        x1, y1, x2, y2 = [int(coord) for coord in bbox]
-        
-        # Choose color based on confidence
-        if score >= 0.8:
-            color = (0, 255, 0)  # Green for high confidence
-        elif score >= 0.6:
-            color = (255, 255, 0)  # Yellow for medium confidence
-        else:
-            color = (255, 0, 0)  # Red for low confidence
-        
-        # Draw bounding box
-        draw.rectangle([x1, y1, x2, y2], outline=color, width=2)
-        
-        # Draw confidence score
-        label = f"{score:.2f}"
-        text_bbox = draw.textbbox((0, 0), label, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
-        
-        # Draw background rectangle for text
-        draw.rectangle(
-            [x1, y1 - text_height - 4, x1 + text_width + 4, y1],
-            fill=color
-        )
-        
-        # Draw text
-        draw.text((x1 + 2, y1 - text_height - 2), label, fill=(0, 0, 0), font=font)
-    
-    return img_with_boxes
-
-
-def save_annotated_image(image: Image.Image, format: str = "JPEG") -> str:
-    """
-    Save annotated image to disk and return the URL path.
-    
-    Args:
-        image: PIL Image object
-        format: Image format (JPEG, PNG, etc.)
-        
-    Returns:
-        URL path to the saved image
-    """
-    # Create static/images directory if it doesn't exist
-    static_dir = "static"
-    images_dir = os.path.join(static_dir, "images")
-    os.makedirs(images_dir, exist_ok=True)
-    
-    # Generate unique filename with timestamp
-    timestamp = int(time.time())
-    unique_id = str(uuid.uuid4())[:8]
-    filename = f"detection_{timestamp}_{unique_id}.{format.lower()}"
-    filepath = os.path.join(images_dir, filename)
-    
-    # Save the image
-    image.save(filepath, format=format, quality=85, optimize=True)
-    
-    # Return the URL path (relative to the API base)
-    url_path = f"/static/images/{filename}"
-    logger.info(f"Saved annotated image to: {url_path}")
-    
-    return url_path
-
-
-def cleanup_old_images(max_age_hours: int = 24):
-    """
-    Clean up old annotated images to prevent disk bloat.
-    
-    Args:
-        max_age_hours: Maximum age of images in hours before deletion
-    """
-    try:
-        images_dir = os.path.join("static", "images")
-        if not os.path.exists(images_dir):
-            return
-            
-        current_time = time.time()
-        max_age_seconds = max_age_hours * 3600
-        
-        for filename in os.listdir(images_dir):
-            if filename.startswith("detection_") and filename.endswith((".jpg", ".jpeg", ".png")):
-                filepath = os.path.join(images_dir, filename)
-                file_age = current_time - os.path.getmtime(filepath)
-                
-                if file_age > max_age_seconds:
-                    os.remove(filepath)
-                    logger.info(f"Cleaned up old image: {filename}")
-                    
-    except Exception as e:
-        logger.warning(f"Failed to cleanup old images: {e}")
-
-
-def image_to_base64(image: Image.Image, format: str = "JPEG") -> str:
-    """
-    Convert PIL Image to base64 string (kept for backward compatibility).
-    
-    Args:
-        image: PIL Image object
-        format: Image format (JPEG, PNG, etc.)
-        
-    Returns:
-        Base64 encoded string with data URI prefix
-    """
-    buffer = io.BytesIO()
-    image.save(buffer, format=format)
-    img_bytes = buffer.getvalue()
-    img_base64 = base64.b64encode(img_bytes).decode()
-    
-    # Return as data URI
-    mime_type = f"image/{format.lower()}"
-    return f"data:{mime_type};base64,{img_base64}"
 
 
 # ------------------------------
