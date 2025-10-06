@@ -84,3 +84,22 @@ class colourFilterResponse(BaseModel):
     
     # Optional URL to image with filtered bounding boxes
     image_with_boxes: Optional[str] = Field(None, description="URL to image with filtered bounding boxes")
+
+
+# ------------------------------
+# Route By Colour Response Schema
+# ------------------------------
+class RouteByColourResponse(BaseModel):
+    # Tap position coordinates used to pick the target colour
+    tap_x: int = Field(..., description="X coordinate where user tapped")
+    tap_y: int = Field(..., description="Y coordinate where user tapped")
+
+    # The colour detected at the tap point (name and confidence)
+    selected_colour: str = Field(..., description="Detected colour name at tap point")
+    colour_confidence: float = Field(..., description="Confidence in colour classification (0.0-1.0)")
+
+    # Detections filtered to match the selected colour
+    detections: List[Detection]
+
+    # Optional URL to image with matched bounding boxes drawn
+    image_with_boxes: Optional[str] = Field(None, description="URL to image with matched bounding boxes only")

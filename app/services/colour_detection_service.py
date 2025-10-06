@@ -5,9 +5,7 @@ from typing import Tuple, Optional
 from PIL import Image
 
 from app.services.color_service import (
-    get_color_at_pixel,
     classify_color,
-    draw_bounding_boxes,
     save_annotated_image,
     cleanup_old_images
 )
@@ -19,6 +17,36 @@ logger = logging.getLogger(__name__)
 # ------------------------------
 # Colour Detection Service
 # ------------------------------
+
+def get_average_color(image: Image.Image, x: int, y: int, radius: int = 10) -> Tuple[int, int, int]:
+    """
+    Compute the average RGB color in a square window around (x, y).
+    Returns an (R, G, B) tuple with 0-255 ints.
+    """
+    pixels = []
+    width, height = image.size
+    for dx in range(-radius, radius + 1):
+        for dy in range(-radius, radius + 1):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < width and 0 <= ny < height:
+                pixels.append(image.getpixel((nx, ny)))
+    if not pixels:
+        return (0, 0, 0)
+    r = sum(p[0] for p in pixels) // len(pixels)
+    g = sum(p[1] for p in pixels) // len(pixels)
+    b = sum(p[2] for p in pixels) // len(pixels)
+    return (r, g, b)
+
+
+def rgb_to_opencv_hsv(rgb: Tuple[int, int, int]) -> Tuple[int, int, int]:
+    """
+    Convert RGB (0-255) to OpenCV-style HSV where H in [0,179], S,V in [0,255].
+    """
+    import colorsys
+    r, g, b = rgb
+    rh, gs, gb = r / 255.0, g / 255.0, b / 255.0
+    h, s, v = colorsys.rgb_to_hsv(rh, gs, gb)  # h in [0,1], s,v in [0,1]
+    return (int(h * 179), int(s * 255), int(v * 255))
 def predict_holds_by_colour(
     image_bytes: bytes,
     tap_x: int,
@@ -57,8 +85,9 @@ def predict_holds_by_colour(
         if tap_x >= image.size[0] or tap_y >= image.size[1] or tap_x < 0 or tap_y < 0:
             raise ValueError(f"Tap coordinates ({tap_x}, {tap_y}) are outside image bounds")
         
-        # Get colour at tap point
-        target_hsv = get_color_at_pixel(image, tap_x, tap_y)
+        # Get average colour around tap point and convert to HSV for classification
+        avg_rgb = get_average_color(image, tap_x, tap_y, radius=5)
+        target_hsv = rgb_to_opencv_hsv(avg_rgb)
         selected_colour, colour_confidence = classify_color(target_hsv)
         
         logger.info(f"Detected colour at ({tap_x}, {tap_y}): {selected_colour} (confidence: {colour_confidence:.2f})")
