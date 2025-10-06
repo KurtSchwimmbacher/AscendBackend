@@ -46,7 +46,6 @@ def health() -> HealthResponse:
     """
     return HealthResponse()
 
-
 # ------------------------------
 # Detect Route Holds By Tap Colour (orchestrator)
 # ------------------------------
