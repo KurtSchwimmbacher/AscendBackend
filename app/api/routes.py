@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 # Router setup
 # ------------------------------
 # Create an APIRouter instance — this groups related endpoints together.
-# Later, this `api_router` will be included in the main FastAPI app.
 api_router = APIRouter()
 
 
