@@ -1,11 +1,20 @@
-# Use Python 3.12 slim (Debian 12 Bookworm for stability)
+# Use Python 3.12 slim (Debian 12 Bookworm)
 FROM python:3.12-slim-bookworm
 
-# Set working directory in container
+# Make logs appear in real time & avoid pip cache
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PORT=8000
+
 WORKDIR /app
 
-# Install system dependencies for ML libraries and OpenCV
+# Install only the system libraries needed for CV/ML and runtime.
+# build-essential is included because some pip packages may need to compile C extensions;
+# if all your wheels are prebuilt, remove build-essential to save space or use a multi-stage build.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    build-essential \
+    wget \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -13,7 +22,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender-dev \
     libgomp1 \
     libgl1-mesa-glx \
-    libgthread-2.0-0 \
     libfontconfig1 \
     libxss1 \
     libxtst6 \
@@ -26,22 +34,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf2.0-0 \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy and install dependencies first for caching
+# Copy and install Python deps first for caching
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Upgrade pip/tools and install Python requirements
+RUN python -m pip install --upgrade pip setuptools wheel \
+ && pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy app source
 COPY . .
 
-# Ensure static directory exists
-RUN mkdir -p static/images
+# Ensure static folder exists and set permissions for a non-root user
+RUN mkdir -p /app/static/images \
+ && chown -R 1000:1000 /app
 
-# Expose FastAPI port
-EXPOSE 8000
+# Switch to a non-root user (safer). Render runs containers as root by default,
+# but running app code as non-root is a best practice.
+USER 1000
 
-# Environment setup
-ENV PYTHONPATH=/app
+# Expose default port (can be overridden by PORT env var on Render)
+EXPOSE ${PORT}
 
-# Run FastAPI with Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start the app. Use sh -c so ${PORT} expansion works and exec so process receives signals.
+# --proxy-headers is helpful when behind proxies/load-balancers.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --lifespan auto"]
