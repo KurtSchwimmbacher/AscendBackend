@@ -12,9 +12,6 @@ from app.services.color_service import (
     draw_bounding_boxes,
     save_annotated_image,
     cleanup_old_images,
-    get_color_at_pixel,
-    classify_color,
-    filter_detections_by_color
 )
 
 

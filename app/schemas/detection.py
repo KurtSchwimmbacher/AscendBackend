@@ -28,18 +28,6 @@ class Detection(BaseModel):
 
 
 # ------------------------------
-# Query Parameters Schema
-# ------------------------------
-class DetectRequestQuery(BaseModel):
-    # Optional confidence threshold for filtering detections
-    # Must be between 0.0 and 1.0 if provided
-    conf: Optional[float] = Field(None, ge=0.0, le=1.0)
-    
-    # Whether to return annotated image with bounding boxes
-    return_annotated_image: bool = Field(False, description="Return URL to image with drawn bounding boxes")
-
-
-# ------------------------------
 # Colour Filter Request Schema
 # ------------------------------
 class colourFilterRequest(BaseModel):
@@ -55,35 +43,6 @@ class colourFilterRequest(BaseModel):
     
     # Whether to return annotated image with filtered bounding boxes
     return_annotated_image: bool = Field(False, description="Return URL to image with filtered bounding boxes")
-
-
-# ------------------------------
-# Full Detection Response Schema
-# ------------------------------
-class DetectResponse(BaseModel):
-    # List of all detected holds in the uploaded image
-    detections: List[Detection]
-    
-    # Optional URL to image with bounding boxes drawn
-    image_with_boxes: Optional[str] = Field(None, description="URL to image with drawn bounding boxes")
-
-
-# ------------------------------
-# Colour Filter Response Schema
-# ------------------------------
-class colourFilterResponse(BaseModel):
-    # Tap position coordinates
-    tap_x: int = Field(..., description="X coordinate where user tapped")
-    tap_y: int = Field(..., description="Y coordinate where user tapped")
-    
-    # The colour that was detected at the tap point
-    selected_colour: str = Field(..., description="Colour name detected at tap point")
-    
-    # Colour confidence (0.0-1.0)
-    colour_confidence: float = Field(..., description="Confidence in colour detection")
-    
-    # Optional URL to image with filtered bounding boxes
-    image_with_boxes: Optional[str] = Field(None, description="URL to image with filtered bounding boxes")
 
 
 # ------------------------------
