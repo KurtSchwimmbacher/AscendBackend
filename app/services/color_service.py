@@ -34,7 +34,7 @@ COLOUR_RANGES = {
 # ------------------------------
 # Colour Analysis Functions
 # ------------------------------
-def get_colour_at_pixel(image: Image.Image, x: int, y: int, region_size: int = 5) -> Tuple[int, int, int]:
+def get_colour_at_pixel(image: Image.Image, x: int, y: int, region_size: int = 10) -> Tuple[int, int, int]:
     """
     Get the dominant colour in a small region around the specified pixel.
     
@@ -47,20 +47,29 @@ def get_colour_at_pixel(image: Image.Image, x: int, y: int, region_size: int = 5
         HSV colour tuple (h, s, v)
     """
     # Convert PIL to OpenCV format
+    # np.array converts the image to a numpy array (which is in RGB because PIL is RGB)
+    # cv2.cvtColor converts the image from RGB to BGR - because OpenCV expects BGR for processing
     cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    # cv2.cvtColor converts the image from BGR to HSV -> HSV is a colour space that is more intuitive for colour detection
     hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
     
-    # Define region boundaries
+    # Define the square region around the pixel to analyze
+    # half_size is the radius of the square region
     half_size = region_size // 2
+    # y1 is the top left y coordinate of the square region and so on
+    # max & min ensure that the region stays within the image boundaries
     y1 = max(0, y - half_size)
     y2 = min(hsv_image.shape[0], y + half_size + 1)
     x1 = max(0, x - half_size)
     x2 = min(hsv_image.shape[1], x + half_size + 1)
     
-    # Extract region
+    # Extract region from the HSV image with the coordinate ranges defined above
     region = hsv_image[y1:y2, x1:x2]
     
     # Calculate mean colour
+    # np.mean calculates the mean colour of the region
+    # so mean_colour will look like this: mean_colour = [12.3, 200.5, 255.0] -> hue, saturation, value
+    # tuple(map(int, mean_colour)) converts the mean_colour to a tuple of integers
     mean_colour = np.mean(region, axis=(0, 1))
     return tuple(map(int, mean_colour))
 
@@ -90,6 +99,7 @@ def classify_colour(hsv_colour: Tuple[int, int, int]) -> Tuple[str, float]:
                     h_min, s_min, v_min = range_pair[0]
                     h_max, s_max, v_max = range_pair[1]
                     
+                    # if the hue, saturation, and value are within the range, set the confidence to 1.0
                     if (h_min <= h <= h_max and 
                         s_min <= s <= s_max and 
                         v_min <= v <= v_max):
@@ -125,24 +135,41 @@ def create_colour_mask(image: Image.Image, target_hsv: Tuple[int, int, int], tol
         Binary mask as numpy array
     """
     # Convert PIL to OpenCV format
+    # Convert PIL to OpenCV format
+    # np.array converts the image to a numpy array (which is in RGB because PIL is RGB)
+    # cv2.cvtColor converts the image from RGB to BGR - because OpenCV expects BGR for processing
     cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
     hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
     
     h, s, v = target_hsv
+    # tolerance is user defined from 0-100, so now we convert it to 0-179 for H and 0-255 for S and V
+    # this is for how similar the colour needs to be to the target colour
     tolerance_h = int(tolerance * 1.8)  # Hue tolerance
     tolerance_sv = int(tolerance * 2.55)  # Saturation/Value tolerance
     
     # Define colour range
-    lower = np.array([max(0, h - tolerance_h), max(0, s - tolerance_sv), max(0, v - tolerance_sv)])
-    upper = np.array([min(179, h + tolerance_h), min(255, s + tolerance_sv), min(255, v + tolerance_sv)])
+    # max & min ensure that the range stays within the colour boundaries
+    # one calculation for each of H, S, and V
+    lower = np.array([
+        max(0, h - tolerance_h), #H
+        max(0, s - tolerance_sv), #S
+        max(0, v - tolerance_sv) #V
+        ]) #lower is now the lowest possible colour value -> lower = (0, 0, 0)
+    upper = np.array([
+        min(179, h + tolerance_h), 
+        min(255, s + tolerance_sv), 
+        min(255, v + tolerance_sv)
+        ])
     
     # Create mask
+    # cv2.inRange creates a binary mask of the image where the pixels are within the lower and upper bounds
+    # pixels within the bounds are set to 255, otherwise 0
     mask = cv2.inRange(hsv_image, lower, upper)
     
     # Apply morphological operations to clean up the mask
-    kernel = np.ones((3, 3), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    kernel = np.ones((3, 3), np.uint8) # creates a 3x3 kernel
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel) # closes gaps in the mask
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel) # removes small white noise from the mask
     
     return mask
 
@@ -165,14 +192,16 @@ def filter_detections_by_colour(
     Returns:
         Filtered list of detections
     """
-    # Create colour mask
+    # Create colour mask using function above
     colour_mask = create_colour_mask(image, target_hsv, tolerance)
     
+    # this will store detections that are within the colour mask
     filtered_detections = []
     
+    # iterate through each detection
     for detection in detections:
-        bbox = detection["bbox_xyxy"]
-        x1, y1, x2, y2 = [int(coord) for coord in bbox]
+        bbox = detection["bbox_xyxy"] #get the bounding box coordinates
+        x1, y1, x2, y2 = [int(coord) for coord in bbox] #convert to integers
         
         # Ensure coordinates are within image bounds
         x1 = max(0, x1)
@@ -180,18 +209,18 @@ def filter_detections_by_colour(
         x2 = min(colour_mask.shape[1], x2)
         y2 = min(colour_mask.shape[0], y2)
         
-        # Extract region from mask
-        region_mask = colour_mask[y1:y2, x1:x2]
+        # this is the region of the image that is within the colour mask
+        region_mask = colour_mask[y1:y2, x1:x2] #array of booleans for each pixel in the region
         
         # Calculate colour overlap percentage
-        if region_mask.size > 0:
-            colour_pixels = np.sum(region_mask > 0)
-            total_pixels = region_mask.size
-            overlap_percentage = (colour_pixels / total_pixels) * 100
+        if region_mask.size > 0: #total number of pixels in the region
+            colour_pixels = np.sum(region_mask > 0) #counts the number of pixels that match the target colour
+            total_pixels = region_mask.size 
+            overlap_percentage = (colour_pixels / total_pixels) * 100 #percentage of the region that matches the target colour
             
-            # Include detection if it has sufficient color overlap
-            if overlap_percentage >= 20.0:  # At least 20% of the region should match the color
-                filtered_detections.append(detection)
+            # Include detection if it has sufficient colour overlap
+            if overlap_percentage >= 20.0:  # At least 20% of the region should match the colour
+                filtered_detections.append(detection) #add the detection to the filtered list
     
     return filtered_detections
 
@@ -235,7 +264,7 @@ def draw_bounding_boxes(
         # Convert to integers for drawing
         x1, y1, x2, y2 = [int(coord) for coord in bbox]
         
-        # Choose color based on confidence
+        # Choose colour based on confidence
         if score >= 0.8:
             colour = (0, 255, 0)  # Green for high confidence
         elif score >= 0.6:
