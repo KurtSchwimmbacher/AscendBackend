@@ -10,7 +10,6 @@ WORKDIR /app
 
 # Install only the system libraries needed for CV/ML and runtime.
 # build-essential is included because some pip packages may need to compile C extensions;
-# if all your wheels are prebuilt, remove build-essential to save space or use a multi-stage build.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     build-essential \

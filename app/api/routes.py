@@ -15,9 +15,9 @@ from app.schemas.detection import (
 from app.services.yolo_service import predict_holds
 from app.services.colour_detection_service import predict_holds_by_colour
 from app.services.color_service import (
-    get_color_at_pixel,
-    classify_color,
-    filter_detections_by_color,
+    get_colour_at_pixel,
+    classify_colour,
+    filter_detections_by_colour,
     draw_bounding_boxes,
     save_annotated_image,
 )
@@ -46,7 +46,7 @@ def health() -> HealthResponse:
     return HealthResponse()
 
 # ------------------------------
-# Detect Route Holds By Tap Colour (orchestrator)
+# Detect Route Holds By Tap Colour 
 # ------------------------------
 @api_router.post("/routes/detect-by-colour", response_model=RouteByColourResponse)
 async def detect_route_by_colour(
@@ -78,6 +78,7 @@ async def detect_route_by_colour(
             raise HTTPException(status_code=400, detail="Empty file uploaded")
 
         # Run YOLO to get detections (no annotated image yet)
+        # predict_holds comes from yolo_service.py -> unfiltered detections
         detections, _ = predict_holds(
             contents,
             conf=query.conf,
@@ -92,11 +93,14 @@ async def detect_route_by_colour(
             image = image.convert('RGB')
 
         # Determine target colour at tap
-        hsv_at_tap = get_color_at_pixel(image, query.tap_x, query.tap_y, region_size=5)
-        selected_colour, colour_confidence = classify_color(hsv_at_tap)
+        # get_color_at_pixel comes from color_service.py
+        hsv_at_tap = get_colour_at_pixel(image, query.tap_x, query.tap_y, region_size=5)
+        # classify_colour comes from color_service.py
+        selected_colour, colour_confidence = classify_colour(hsv_at_tap)
 
         # Filter detections by colour tolerance
-        filtered = filter_detections_by_color(
+        # filter_detections_by_colour comes from color_service.py
+        filtered = filter_detections_by_colour(
             detections=detections,
             image=image,
             target_hsv=hsv_at_tap,
@@ -108,6 +112,7 @@ async def detect_route_by_colour(
         if query.return_annotated_image:
             try:
                 # Start from original image, draw boxes for filtered detections if any
+                # draw_bounding_boxes comes from color_service.py
                 annotated = draw_bounding_boxes(image, filtered, conf_threshold=query.conf or 0.0) if filtered else image.copy()
 
                 # Draw a circle around the selected tap point
@@ -122,6 +127,8 @@ async def detect_route_by_colour(
                     y + circle_radius,
                 ], outline=(255, 255, 255), width=3)
 
+                # Save to disk and get URL
+                # save_annotated_image comes from color_service.py
                 annotated_url = save_annotated_image(annotated)
             except Exception as viz_error:
                 logger.warning(f"Failed to create annotated image for route-by-colour: {viz_error}")

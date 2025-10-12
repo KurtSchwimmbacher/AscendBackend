@@ -34,7 +34,7 @@ COLOR_RANGES = {
 # ------------------------------
 # Color Analysis Functions
 # ------------------------------
-def get_color_at_pixel(image: Image.Image, x: int, y: int, region_size: int = 5) -> Tuple[int, int, int]:
+def get_colour_at_pixel(image: Image.Image, x: int, y: int, region_size: int = 5) -> Tuple[int, int, int]:
     """
     Get the dominant color in a small region around the specified pixel.
     
@@ -65,7 +65,7 @@ def get_color_at_pixel(image: Image.Image, x: int, y: int, region_size: int = 5)
     return tuple(map(int, mean_color))
 
 
-def classify_color(hsv_color: Tuple[int, int, int]) -> Tuple[str, float]:
+def classify_colour(hsv_color: Tuple[int, int, int]) -> Tuple[str, float]:
     """
     Classify an HSV color into a named color category.
     
@@ -112,7 +112,7 @@ def classify_color(hsv_color: Tuple[int, int, int]) -> Tuple[str, float]:
     return best_match, best_confidence
 
 
-def create_color_mask(image: Image.Image, target_hsv: Tuple[int, int, int], tolerance: float) -> np.ndarray:
+def create_colour_mask(image: Image.Image, target_hsv: Tuple[int, int, int], tolerance: float) -> np.ndarray:
     """
     Create a binary mask of pixels similar to the target color.
     
@@ -147,7 +147,7 @@ def create_color_mask(image: Image.Image, target_hsv: Tuple[int, int, int], tole
     return mask
 
 
-def filter_detections_by_color(
+def filter_detections_by_colour(
     detections: List[dict], 
     image: Image.Image, 
     target_hsv: Tuple[int, int, int], 
@@ -166,7 +166,7 @@ def filter_detections_by_color(
         Filtered list of detections
     """
     # Create color mask
-    color_mask = create_color_mask(image, target_hsv, tolerance)
+    color_mask = create_colour_mask(image, target_hsv, tolerance)
     
     filtered_detections = []
     
