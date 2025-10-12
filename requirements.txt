@@ -6,3 +6,6 @@ python-multipart
 torch
 ultralytics
 huggingface_hub
+opencv-python-headless
+Pillow
+numpy

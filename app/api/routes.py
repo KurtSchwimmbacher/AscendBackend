@@ -145,8 +145,8 @@ async def detect_route_by_colour(
         logger.error(f"route-by-colour error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as exc:
-        logger.error(f"Unexpected error during route-by-colour: {str(exc)}")
+        logger.error(f"Unexpected error during route-by-colour: {str(exc)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail="Internal server error during route-by-colour",
+            detail=f"Internal server error during route-by-colour: {str(exc)}",
         ) from exc
