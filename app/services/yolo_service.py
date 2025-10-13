@@ -94,16 +94,21 @@ def predict_holds(
         if image.mode != 'RGB':
             image = image.convert('RGB')
         
-        logger.info(f"Processing image: {image.size[0]}x{image.size[1]} pixels")
+        logger.info(f"Processing image: {image.size[0]}x{image.size[1]} pixels at inference size {settings.yolo_imgsz}")
         
         # Run YOLO inference
-        results = model(
-            source=image,
-            imgsz=settings.yolo_imgsz,     # Inference image size
-            max_det=settings.yolo_max_det,  # Maximum number of detections
-            conf=confidence,                # Confidence threshold
-            verbose=False,
-        )
+        # Note: Lower imgsz = less memory usage, faster inference, but potentially less accurate
+        try:
+            results = model(
+                source=image,
+                imgsz=settings.yolo_imgsz,     # Inference image size
+                max_det=settings.yolo_max_det,  # Maximum number of detections
+                conf=confidence,                # Confidence threshold
+                verbose=False,
+            )
+        except Exception as inference_error:
+            logger.error(f"YOLO inference failed: {inference_error}. This may be due to memory constraints.")
+            raise ValueError(f"Model inference failed: {inference_error}") from inference_error
 
         # Parse results into a list of dictionaries
         parsed: List[dict] = []

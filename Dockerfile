@@ -56,4 +56,6 @@ EXPOSE ${PORT}
 
 # Start the app. Use sh -c so ${PORT} expansion works and exec so process receives signals.
 # --proxy-headers is helpful when behind proxies/load-balancers.
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --lifespan auto"]
+# --timeout-keep-alive: Keep connections alive longer for model download
+# --timeout-graceful-shutdown: Give time for requests to complete before shutdown
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --lifespan auto --timeout-keep-alive 75 --timeout-graceful-shutdown 30"]

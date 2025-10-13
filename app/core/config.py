@@ -33,7 +33,9 @@ class Settings(BaseSettings):
     )
 
     # Image size used for YOLO inference (larger = more detail, slower)
-    yolo_imgsz: int = Field(2560, description="YOLO inference image size")
+    # Set to 640 for free tier (512MB RAM), can increase to 1280/2560 on paid tiers
+    # Override via environment variable: YOLO_IMGSZ=1280
+    yolo_imgsz: int = Field(640, description="YOLO inference image size", env="YOLO_IMGSZ")
 
     # Maximum number of detections YOLO should return
     # set to a high number for now, filtering can happen later
