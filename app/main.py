@@ -1,4 +1,15 @@
 import os
+
+# Set cache directories to writable locations BEFORE importing any ML libraries
+if not os.environ.get('HF_HOME'):
+    os.environ['HF_HOME'] = '/tmp/.cache/huggingface'
+if not os.environ.get('TORCH_HOME'):
+    os.environ['TORCH_HOME'] = '/tmp/.cache/torch'
+if not os.environ.get('ULTRALYTICS_CONFIG_DIR'):
+    os.environ['ULTRALYTICS_CONFIG_DIR'] = '/tmp/.cache/ultralytics'
+if not os.environ.get('MPLCONFIGDIR'):
+    os.environ['MPLCONFIGDIR'] = '/tmp/.cache/matplotlib'
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.core.logging import configure_logging

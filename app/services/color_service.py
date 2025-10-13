@@ -54,7 +54,6 @@ def get_colour_at_pixel(image: Image.Image, x: int, y: int, region_size: int = 1
     hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
     
     # Define the square region around the pixel to analyze
-    # half_size is the radius of the square region
     half_size = region_size // 2
     # y1 is the top left y coordinate of the square region and so on
     # max & min ensure that the region stays within the image boundaries
@@ -69,7 +68,6 @@ def get_colour_at_pixel(image: Image.Image, x: int, y: int, region_size: int = 1
     # Calculate mean colour
     # np.mean calculates the mean colour of the region
     # so mean_colour will look like this: mean_colour = [12.3, 200.5, 255.0] -> hue, saturation, value
-    # tuple(map(int, mean_colour)) converts the mean_colour to a tuple of integers
     mean_colour = np.mean(region, axis=(0, 1))
     return tuple(map(int, mean_colour))
 
@@ -134,7 +132,6 @@ def create_colour_mask(image: Image.Image, target_hsv: Tuple[int, int, int], tol
     Returns:
         Binary mask as numpy array
     """
-    # Convert PIL to OpenCV format
     # Convert PIL to OpenCV format
     # np.array converts the image to a numpy array (which is in RGB because PIL is RGB)
     # cv2.cvtColor converts the image from RGB to BGR - because OpenCV expects BGR for processing

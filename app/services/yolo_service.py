@@ -1,5 +1,6 @@
 import logging
 import io
+import os
 from functools import lru_cache
 from typing import Any, List, Optional, Tuple
 
@@ -13,6 +14,14 @@ from app.services.color_service import (
     save_annotated_image,
     cleanup_old_images,
 )
+
+# Set cache directories to writable locations for deployment environments like Render
+if not os.environ.get('HF_HOME'):
+    os.environ['HF_HOME'] = '/tmp/.cache/huggingface'
+if not os.environ.get('TORCH_HOME'):
+    os.environ['TORCH_HOME'] = '/tmp/.cache/torch'
+if not os.environ.get('ULTRALYTICS_CONFIG_DIR'):
+    os.environ['ULTRALYTICS_CONFIG_DIR'] = '/tmp/.cache/ultralytics'
 
 
 # Set up a logger for this module
@@ -35,10 +44,11 @@ def get_model() -> YOLO:
     )
 
     # Download model weights from Hugging Face hub
+    # cache_dir will use HF_HOME environment variable if set
     weights_path = hf_hub_download(
         repo_id=settings.hf_repo_id,
         filename=settings.hf_filename,
-        local_dir=None,  # Default cache dir (~/.cache/huggingface/hub)
+        cache_dir=os.environ.get('HF_HOME'),  # Use writable cache directory
     )
 
     # Load the YOLO model with the downloaded weights
